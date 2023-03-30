@@ -2,6 +2,7 @@
 
 require 'json'
 
+# Sanitizes the value of a key that is sensitive field
 def sanitize(data)
   if data.instance_of?(Array)
     data.map { |el| sanitize_element(el) }
@@ -14,6 +15,7 @@ def sanitize(data)
   end
 end
 
+# Sanitizes a single value based on its type
 def sanitize_element(data)
   if data.instance_of?(String)
     data.gsub(/([A-Za-z0-9])/, '*')
@@ -21,6 +23,34 @@ def sanitize_element(data)
     data.to_s.gsub(/([A-Za-z0-9])/, '*')
   elsif [TrueClass, FalseClass].include?(data.class)
     '-'
+  end
+end
+
+# Sanitizes array of objects that may have sensitive data
+def sanitize_array(sensitive_fields, data)
+  data.each do |el|
+    next unless el.instance_of?(Hash)
+
+    el.each do |key, value|
+      el[key] = sanitize(value) if sensitive_fields.include?(key)
+    end
+  end
+end
+
+# Sanitizes the user info hash
+def sanitize_hash(sensitive_fields, user_info)
+  user_info.each do |key, value|
+    if sensitive_fields.include?(key)
+      user_info[key] = sanitize(value)
+
+    elsif value.instance_of?(Hash)
+      value.each do |k, v|
+        value[k] = sanitize(v) if sensitive_fields.include?(k)
+      end
+
+    elsif value.instance_of?(Array)
+      sanitize_array(sensitive_fields, value)
+    end
   end
 end
 
@@ -36,11 +66,10 @@ file = File.read(input_file)
 user_info = JSON.parse(file)
 
 # Sanitize user information
-sensitive_fields.each do |field|
-  user_info[field] = sanitize(user_info[field]) if user_info.has_key?(field)
-end
+user_info = sanitize_hash(sensitive_fields, user_info)
 
 # Test program output matches expected
 file = File.read(input_file.gsub('input', 'output'))
 output = JSON.parse(file)
 p "Tests passed: #{output == user_info}"
+p output, user_info if output != user_info
