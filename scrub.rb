@@ -38,7 +38,7 @@ def sanitize_array(sensitive_fields, data)
 end
 
 # Sanitizes the user info hash
-def sanitize_hash(sensitive_fields, user_info)
+def scrub(user_info, sensitive_fields)
   user_info.each do |key, value|
     if sensitive_fields.include?(key)
       user_info[key] = sanitize(value)
@@ -55,21 +55,21 @@ def sanitize_hash(sensitive_fields, user_info)
 end
 
 # Read from command line arguments
-sensitive_fields_file = ARGV[0]
-input_file = ARGV[1]
+sensitive_fields_file_name = ARGV[0]
+input_file_name = ARGV[1]
 
 # Load from files
-file = File.open(sensitive_fields_file)
+file = File.open(sensitive_fields_file_name)
 sensitive_fields = file.readlines.map(&:chomp)
 file.close
-file = File.read(input_file)
+file = File.read(input_file_name)
 user_info = JSON.parse(file)
 
 # Sanitize user information
-user_info = sanitize_hash(sensitive_fields, user_info)
+user_info = scrub(user_info, sensitive_fields)
 
 # Test program output matches expected
-file = File.read(input_file.gsub('input', 'output'))
+file = File.read(input_file_name.gsub('input', 'output'))
 output = JSON.parse(file)
 p "Tests passed: #{output == user_info}"
-p output, user_info if output != user_info
+p user_info
